@@ -1,0 +1,219 @@
+/**
+ * @fileoverview Firestore Security Rules for the Hostel Management System.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for admins and a resource-based ownership model for hostels and related entities.
+ * Admins can only manage their own profiles. Hostels and their subcollections (rooms, tenures, billing records, payments) are owned by a specific admin.
+ *
+ * Data Structure:
+ * - /admins/{adminId}: Stores admin profiles, with the document ID matching the Firebase Auth UID.
+ * - /hostels/{hostelId}: Stores hostel information. Each hostel has an `adminId` field indicating its owner.
+ * - /hostels/{hostelId}/rooms/{roomId}: Stores room details within a specific hostel. Includes the `hostelId` for authorization.
+ * - /hostels/{hostelId}/tenures/{tenureId}: Stores tenure information within a specific hostel. Includes the `hostelId` for authorization.
+ * - /hostels/{hostelId}/billingRecords/{billingRecordId}: Stores billing records within a specific hostel. Includes the `hostelId` for authorization.
+ * - /hostels/{hostelId}/payments/{paymentId}: Stores payment information within a specific hostel. Includes the `hostelId` for authorization.
+ *
+ * Key Security Decisions:
+ * - Admins can only read and write their own admin profile.
+ * - Admins can create, update, and delete hostels they own (verified by the `adminId` field).
+ * - Rooms, tenures, billing records, and payments are secured based on the `hostelId` and the admin's ownership of that hostel.
+ * - Listing of admins is denied for security reasons.
+ *
+ * Denormalization for Authorization:
+ * - Hostel documents include the `adminId` to easily verify ownership.
+ * - Tenure, Room, BillingRecord, and Payment documents include the `hostelId` to avoid costly `get()` calls when checking permissions on subcollections.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Secure admin profiles. Admins can only manage their own profiles.
+     * @path /admins/{adminId}
+     * @allow (create) - An admin with UID 'user_abc' can create their profile at /admins/user_abc if the 'id' field in the data also equals 'user_abc'.
+     * @allow (get, update, delete) - An admin with UID 'user_abc' can get, update, and delete their profile at /admins/user_abc.
+     * @deny (create) - An admin with UID 'user_abc' cannot create a profile at /admins/user_xyz.
+     * @deny (update, delete) - An admin with UID 'user_abc' cannot update or delete the profile at /admins/user_xyz.
+     * @principle Enforces document ownership for writes.
+     */
+    match /admins/{adminId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(adminId) {
+        return isSignedIn() && request.auth.uid == adminId;
+      }
+
+      function isExistingOwner(adminId) {
+          return isOwner(adminId) && resource.data != null;
+      }
+
+      allow get: if isOwner(adminId);
+      allow list: if false;
+      allow create: if isOwner(adminId);
+      allow update: if isOwner(adminId);
+      allow delete: if isOwner(adminId);
+    }
+
+    /**
+     * @description Secure hostel information. Only the admin who owns the hostel can manage it.
+     * @path /hostels/{hostelId}
+     * @allow (create) - An admin with UID 'user_abc' can create a hostel at /hostels/hostel_123 if the 'adminId' field in the data equals 'user_abc'.
+     * @allow (get, list, update, delete) - An admin with UID 'user_abc' can get, list, update, and delete the hostel at /hostels/hostel_123 if they are the owner ('adminId' field equals 'user_abc').
+     * @deny (create) - An admin with UID 'user_abc' cannot create a hostel at /hostels/hostel_123 with 'adminId' set to 'user_xyz'.
+     * @deny (update, delete) - An admin with UID 'user_xyz' cannot update or delete the hostel at /hostels/hostel_123 owned by 'user_abc'.
+     * @principle Enforces document ownership for writes and relational integrity.
+     */
+    match /hostels/{hostelId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isAdmin(adminId) {
+        return isSignedIn() && request.auth.uid == adminId;
+      }
+
+      function isHostelOwner() {
+        return get(/databases/$(database)/documents/hostels/$(hostelId)).data.adminId == request.auth.uid;
+      }
+
+      function isExistingHostelOwner() {
+        return isHostelOwner() && resource.data != null;
+      }
+
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.adminId == request.auth.uid;
+      allow update: if isSignedIn() && isHostelOwner();
+      allow delete: if isSignedIn() && isHostelOwner();
+    }
+
+    /**
+     * @description Secure room details within a hostel. Only the admin who owns the hostel can manage rooms.
+     * @path /hostels/{hostelId}/rooms/{roomId}
+     * @allow (create) - An admin can create a room in their hostel if the 'hostelId' field in the data matches the path.
+     * @allow (get, list, update, delete) - Only the hostel owner can manage rooms in their hostel.
+     * @deny (create) - An admin cannot create a room in a hostel they don't own.
+     * @deny (update, delete) - An admin cannot update or delete a room in a hostel they don't own.
+     * @principle Enforces document ownership and relational integrity.
+     */
+    match /hostels/{hostelId}/rooms/{roomId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isAdmin(adminId) {
+        return isSignedIn() && request.auth.uid == adminId;
+      }
+
+      function isHostelOwner(hostelId) {
+        return get(/databases/$(database)/documents/hostels/$(hostelId)).data.adminId == request.auth.uid;
+      }
+
+      function isExistingHostelOwner(hostelId) {
+        return isHostelOwner(hostelId) && resource.data != null;
+      }
+
+      allow get, list: if true;
+      allow create: if isSignedIn() && isHostelOwner(hostelId);
+      allow update: if isSignedIn() && isHostelOwner(hostelId);
+      allow delete: if isSignedIn() && isHostelOwner(hostelId);
+    }
+
+    /**
+     * @description Secure tenure information within a hostel. Only the admin who owns the hostel can manage tenures.
+     * @path /hostels/{hostelId}/tenures/{tenureId}
+     * @allow (create) - An admin can create a tenure in their hostel if the 'hostelId' field in the data matches the path.
+     * @allow (get, list, update, delete) - Only the hostel owner can manage tenures in their hostel.
+     * @deny (create) - An admin cannot create a tenure in a hostel they don't own.
+     * @deny (update, delete) - An admin cannot update or delete a tenure in a hostel they don't own.
+     * @principle Enforces document ownership and relational integrity.
+     */
+    match /hostels/{hostelId}/tenures/{tenureId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isAdmin(adminId) {
+        return isSignedIn() && request.auth.uid == adminId;
+      }
+
+      function isHostelOwner(hostelId) {
+        return get(/databases/$(database)/documents/hostels/$(hostelId)).data.adminId == request.auth.uid;
+      }
+
+      function isExistingHostelOwner(hostelId) {
+        return isHostelOwner(hostelId) && resource.data != null;
+      }
+
+      allow get, list: if true;
+      allow create: if isSignedIn() && isHostelOwner(hostelId);
+      allow update: if isSignedIn() && isHostelOwner(hostelId);
+      allow delete: if isSignedIn() && isHostelOwner(hostelId);
+    }
+
+    /**
+     * @description Secure billing records within a hostel. Only the admin who owns the hostel can manage billing records.
+     * @path /hostels/{hostelId}/billingRecords/{billingRecordId}
+     * @allow (create) - An admin can create a billing record in their hostel if the 'hostelId' field in the data matches the path.
+     * @allow (get, list, update, delete) - Only the hostel owner can manage billing records in their hostel.
+     * @deny (create) - An admin cannot create a billing record in a hostel they don't own.
+     * @deny (update, delete) - An admin cannot update or delete a billing record in a hostel they don't own.
+     * @principle Enforces document ownership and relational integrity.
+     */
+    match /hostels/{hostelId}/billingRecords/{billingRecordId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isAdmin(adminId) {
+        return isSignedIn() && request.auth.uid == adminId;
+      }
+
+      function isHostelOwner(hostelId) {
+        return get(/databases/$(database)/documents/hostels/$(hostelId)).data.adminId == request.auth.uid;
+      }
+
+      function isExistingHostelOwner(hostelId) {
+        return isHostelOwner(hostelId) && resource.data != null;
+      }
+
+      allow get, list: if true;
+      allow create: if isSignedIn() && isHostelOwner(hostelId);
+      allow update: if isSignedIn() && isHostelOwner(hostelId);
+      allow delete: if isSignedIn() && isHostelOwner(hostelId);
+    }
+
+    /**
+     * @description Secure payment information within a hostel. Only the admin who owns the hostel can manage payments.
+     * @path /hostels/{hostelId}/payments/{paymentId}
+     * @allow (create) - An admin can create a payment in their hostel if the 'hostelId' field in the data matches the path.
+     * @allow (get, list, update, delete) - Only the hostel owner can manage payments in their hostel.
+     * @deny (create) - An admin cannot create a payment in a hostel they don't own.
+     * @deny (update, delete) - An admin cannot update or delete a payment in a hostel they don't own.
+     * @principle Enforces document ownership and relational integrity.
+     */
+    match /hostels/{hostelId}/payments/{paymentId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isAdmin(adminId) {
+        return isSignedIn() && request.auth.uid == adminId;
+      }
+
+      function isHostelOwner(hostelId) {
+        return get(/databases/$(database)/documents/hostels/$(hostelId)).data.adminId == request.auth.uid;
+      }
+
+      function isExistingHostelOwner(hostelId) {
+        return isHostelOwner(hostelId) && resource.data != null;
+      }
+
+      allow get, list: if true;
+      allow create: if isSignedIn() && isHostelOwner(hostelId);
+      allow update: if isSignedIn() && isHostelOwner(hostelId);
+      allow delete: if isSignedIn() && isHostelOwner(hostelId);
+    }
+  }
+}

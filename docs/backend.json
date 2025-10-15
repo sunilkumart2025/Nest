@@ -1,0 +1,451 @@
+{
+  "entities": {
+    "Hostel": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Hostel",
+      "type": "object",
+      "description": "Represents a hostel managed within the system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the hostel entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the hostel."
+        },
+        "location": {
+          "type": "string",
+          "description": "Location or address of the hostel."
+        },
+        "adminId": {
+          "type": "string",
+          "description": "Reference to Admin. (Relationship: Admin 1:N Hostel)"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "location",
+        "adminId"
+      ]
+    },
+    "Admin": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Admin",
+      "type": "object",
+      "description": "Represents a hostel administrator (owner).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the admin entity."
+        },
+        "fullName": {
+          "type": "string",
+          "description": "Full name of the hostel administrator."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the hostel administrator.",
+          "format": "email"
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "Phone number of the hostel administrator."
+        },
+        "razorpayKeyId": {
+          "type": "string",
+          "description": "Razorpay Key ID for payment integration."
+        },
+        "razorpaySecretKey": {
+          "type": "string",
+          "description": "Razorpay Secret Key for payment integration."
+        }
+      },
+      "required": [
+        "id",
+        "fullName",
+        "email",
+        "phoneNumber",
+        "razorpayKeyId",
+        "razorpaySecretKey"
+      ]
+    },
+    "Tenure": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Tenure",
+      "type": "object",
+      "description": "Represents a tenant (room holder) in the hostel.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the tenure entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the tenant."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the tenant.",
+          "format": "email"
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "Phone number of the tenant."
+        },
+        "registrationNumber": {
+          "type": "string",
+          "description": "Registration number assigned to the tenant."
+        },
+        "roomId": {
+          "type": "string",
+          "description": "Reference to Room. (Relationship: Room 1:N Tenure)"
+        },
+        "hostelId": {
+          "type": "string",
+          "description": "Reference to Hostel. (Relationship: Hostel 1:N Tenure)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "The Firebase Auth UID of the tenure after they create an account."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email",
+        "phoneNumber",
+        "registrationNumber",
+        "roomId",
+        "hostelId"
+      ]
+    },
+    "Room": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Room",
+      "type": "object",
+      "description": "Represents a room in the hostel.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the room entity."
+        },
+        "roomNumber": {
+          "type": "string",
+          "description": "Room number or identifier."
+        },
+        "status": {
+          "type": "string",
+          "description": "Occupancy status of the room (e.g., 'Occupied', 'Available')."
+        },
+        "rent": {
+          "type": "number",
+          "description": "Total rent amount for the room."
+        },
+        "capacity": {
+          "type": "number",
+          "description": "The maximum number of tenures that can occupy the room."
+        },
+        "hostelId": {
+          "type": "string",
+          "description": "Reference to Hostel. (Relationship: Hostel 1:N Room)"
+        }
+      },
+      "required": [
+        "id",
+        "roomNumber",
+        "status",
+        "rent",
+        "capacity",
+        "hostelId"
+      ]
+    },
+    "BillingRecord": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "BillingRecord",
+      "type": "object",
+      "description": "Represents a billing record for a tenant.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the billing record entity."
+        },
+        "rentAmount": {
+          "type": "number",
+          "description": "Individual rent amount for the billing period (total rent / occupants)."
+        },
+        "electricityBill": {
+          "type": "number",
+          "description": "Electricity bill amount for the billing period."
+        },
+        "paymentStatus": {
+          "type": "string",
+          "description": "Payment status (e.g., 'Paid', 'Pending')."
+        },
+        "paymentDate": {
+          "type": "string",
+          "description": "Date of payment.",
+          "format": "date-time"
+        },
+        "tenureId": {
+          "type": "string",
+          "description": "Reference to Tenure. (Relationship: Tenure 1:N BillingRecord)"
+        },
+        "hostelId": {
+          "type": "string",
+          "description": "Reference to Hostel. (Relationship: Hostel 1:N BillingRecord)"
+        }
+      },
+      "required": [
+        "id",
+        "rentAmount",
+        "electricityBill",
+        "paymentStatus",
+        "tenureId",
+        "hostelId"
+      ]
+    },
+    "Payment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Payment",
+      "type": "object",
+      "description": "Represents a payment transaction.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the payment entity."
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount paid in the transaction."
+        },
+        "paymentDate": {
+          "type": "string",
+          "description": "Date and time of the payment.",
+          "format": "date-time"
+        },
+        "razorpayPaymentId": {
+          "type": "string",
+          "description": "Razorpay Payment ID associated with the transaction."
+        },
+        "tenureId": {
+          "type": "string",
+          "description": "Reference to Tenure. (Relationship: Tenure 1:N Payment)"
+        },
+        "hostelId": {
+          "type": "string",
+          "description": "Reference to Hostel. (Relationship: Hostel 1:N Payment)"
+        },
+        "billingRecordId": {
+          "type": "string",
+          "description": "Reference to BillingRecord. (Relationship: BillingRecord 1:1 Payment)"
+        }
+      },
+      "required": [
+        "id",
+        "amount",
+        "paymentDate",
+        "razorpayPaymentId",
+        "tenureId",
+        "hostelId",
+        "billingRecordId"
+      ]
+    },
+    "Notice": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Notice",
+      "type": "object",
+      "description": "Represents a notice or announcement.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the notice."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the notice."
+        },
+        "content": {
+          "type": "string",
+          "description": "The main content of the notice."
+        },
+        "hostelId": {
+          "type": "string",
+          "description": "The ID of the hostel this notice belongs to."
+        },
+        "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The timestamp when the notice was created."
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "content",
+        "hostelId",
+        "createdAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/admins/{adminId}",
+        "definition": {
+          "entityName": "Admin",
+          "schema": {
+            "$ref": "#/backend/entities/Admin"
+          },
+          "description": "Stores admin profiles. Uses the Firebase Auth UID as the document ID.",
+          "params": [
+            {
+              "name": "adminId",
+              "description": "The Firebase Auth UID of the admin."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/hostels/{hostelId}",
+        "definition": {
+          "entityName": "Hostel",
+          "schema": {
+            "$ref": "#/backend/entities/Hostel"
+          },
+          "description": "Stores hostel information. The `adminId` field references the admin who owns the hostel.",
+          "params": [
+            {
+              "name": "hostelId",
+              "description": "Unique ID of the hostel."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/hostels/{hostelId}/rooms/{roomId}",
+        "definition": {
+          "entityName": "Room",
+          "schema": {
+            "$ref": "#/backend/entities/Room"
+          },
+          "description": "Stores room details within a hostel. Includes the `hostelId` for authorization independence.",
+          "params": [
+            {
+              "name": "hostelId",
+              "description": "Unique ID of the hostel."
+            },
+            {
+              "name": "roomId",
+              "description": "Unique ID of the room."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/hostels/{hostelId}/tenures/{tenureId}",
+        "definition": {
+          "entityName": "Tenure",
+          "schema": {
+            "$ref": "#/backend/entities/Tenure"
+          },
+          "description": "Stores tenure information within a hostel. Includes `hostelId` for authorization independence. A root-level `/tenures` collection is also used for signup lookups.",
+          "params": [
+            {
+              "name": "hostelId",
+              "description": "Unique ID of the hostel."
+            },
+            {
+              "name": "tenureId",
+              "description": "Unique ID of the tenure."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/tenures/{tenureId}",
+        "definition": {
+          "entityName": "Tenure",
+          "schema": {
+            "$ref": "#/backend/entities/Tenure"
+          },
+          "description": "Root collection for tenures to allow for easy lookup during the tenure signup process using their registration number.",
+          "params": [
+            {
+              "name": "tenureId",
+              "description": "Unique ID of the tenure."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/hostels/{hostelId}/billingRecords/{billingRecordId}",
+        "definition": {
+          "entityName": "BillingRecord",
+          "schema": {
+            "$ref": "#/backend/entities/BillingRecord"
+          },
+          "description": "Stores billing records for tenures within a hostel. Includes `hostelId` for authorization independence.",
+          "params": [
+            {
+              "name": "hostelId",
+              "description": "Unique ID of the hostel."
+            },
+            {
+              "name": "billingRecordId",
+              "description": "Unique ID of the billing record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/hostels/{hostelId}/payments/{paymentId}",
+        "definition": {
+          "entityName": "Payment",
+          "schema": {
+            "$ref": "#/backend/entities/Payment"
+          },
+          "description": "Stores payment information for tenures within a hostel. Includes `hostelId` for authorization independence.",
+          "params": [
+            {
+              "name": "hostelId",
+              "description": "Unique ID of the hostel."
+            },
+            {
+              "name": "paymentId",
+              "description": "Unique ID of the payment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/hostels/{hostelId}/notices/{noticeId}",
+        "definition": {
+          "entityName": "Notice",
+          "schema": {
+            "$ref": "#/backend/entities/Notice"
+          },
+          "description": "Stores notices and announcements for a specific hostel. Both admins and tenures of the hostel can read these.",
+          "params": [
+            {
+              "name": "hostelId",
+              "description": "Unique ID of the hostel."
+            },
+            {
+              "name": "noticeId",
+              "description": "Unique ID of the notice."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to manage a hostel system with separate roles for Admins and Tenures. It emphasizes authorization independence and secure data access.  Admin data is stored under `/admins/{adminId}`. Each admin manages hostels under `/hostels/{hostelId}`.  Rooms, tenures, billing records, and payments are subcollections of hostels to maintain clear ownership. To achieve Authorization Independence, each Tenure, Room, BillingRecord and Payment document contains the `hostelId`. This denormalization avoids the need for `get()` calls in security rules to verify hostel ownership.  The `adminId` is used in the hostel documents to quickly locate the Admin. A root-level `/tenures` collection is also added to simplify the user signup flow, where a tenure can be found easily by their registration number without needing to know the hostelId upfront. This structure facilitates QAPs (Query Accross Partitions) by enabling secure list operations for each entity within a specific hostel."
+  }
+}
