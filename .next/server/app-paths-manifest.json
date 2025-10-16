@@ -1,0 +1,10 @@
+{
+  "/(auth)/login/admin/page": "app/(auth)/login/admin/page.js",
+  "/(auth)/login/tenure/page": "app/(auth)/login/tenure/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/page": "app/page.js",
+  "/tenure/dashboard/page": "app/tenure/dashboard/page.js",
+  "/tenure/notices/page": "app/tenure/notices/page.js",
+  "/tenure/payments/page": "app/tenure/payments/page.js",
+  "/tenure/profile/page": "app/tenure/profile/page.js"
+}
